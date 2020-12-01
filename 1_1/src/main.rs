@@ -40,12 +40,14 @@ fn collect_inputs(file: &mut File) -> Vec<InputType> {
 fn do_magic(values: &Vec<InputType>) {
     for i in 0..values.len() {
         for j in i + 1..values.len() {
-            let l = values[i];
-            let r = values[j];
-            if l + r == SHITHOLE_YEAR {
-                // Found it
-                println!("{} * {} = {}", l, r, l * r);
-                return;
+            for k in j + 1..values.len() {
+                let candidate: Vec<InputType> = vec!(values[i], values[j], values[k]);
+                let sum = candidate.iter().sum::<InputType>();
+                if sum == SHITHOLE_YEAR {
+                    // Found it
+                    println!("Result: {}", candidate.iter().product::<InputType>());
+                    return;
+                }
             }
         }
     }
