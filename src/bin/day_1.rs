@@ -6,7 +6,7 @@ type InputType = i32;
 const SHITHOLE_YEAR: InputType = 2020;
 
 fn main() {
-    let mut file = File::open("input").expect("could not open input file");
+    let mut file = File::open("inputs/day_1").expect("could not open input file");
 
     let inputs = collect_inputs(&mut file);
     do_magic(&inputs);
