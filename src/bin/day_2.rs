@@ -25,20 +25,22 @@ fn main() {
 
 struct Rule {
     character: char,
-    min: u8,
-    max: u8,
+    positions: Vec<usize>,
 }
 
 impl Rule {
     fn test(&self, password: &str) -> bool {
         let mut count: u32 = 0;
-        for character in password.chars() {
-            if character == self.character {
-                count += 1;
+        for (index, character) in password.char_indices() {
+            let corporate_position = index + 1;
+            if self.positions.contains(&corporate_position) {
+                if character == self.character {
+                    count += 1;
+                }
             }
         }
 
-        return count >= self.min as u32 && count <= self.max as u32;
+        return count == 1;
     }
 }
 
@@ -50,19 +52,17 @@ impl From<&str> for Rule {
 
         let mut parts = rule_string.split_ascii_whitespace();
 
-        let range_string = parts.next().expect("invalid rule");
+        let positions_string = parts.next().expect("invalid rule");
 
         let character: &str = parts.next().expect("invalid rule");
         let character = character.chars().nth(0).expect("invalid rule");
 
-        let mut bounds = range_string.split('-');
-        let min: u8 = bounds.next().expect("invalid rule").parse().expect("invalid rule");
-        let max: u8 = bounds.next().expect("invalid rule").parse().expect("invalid rule");
+        let positions = positions_string.split('-');
+        let positions = positions.map(|v| v.parse().expect("invalid rule")).collect::<Vec<usize>>();
 
         return Rule {
             character,
-            min,
-            max,
+            positions,
         };
     }
 }
