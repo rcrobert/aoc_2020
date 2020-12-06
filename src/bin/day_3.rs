@@ -24,14 +24,38 @@ fn main() {
         }
     }
 
+    let toboggans = vec!(
+        Toboggan::new(1, 1),
+        Toboggan::new(1, 3),
+        Toboggan::new(1, 5),
+        Toboggan::new(1, 7),
+        Toboggan::new(2, 1),
+    );
+
     // Follow the route
-    let mut num_collisions = 0;
+
     let map = TobogganMap::new(map_details);
-    let route = Toboggan::new(1, 3);
-    for location in route.slide() {
+    let mut strange_collision_product = 0;
+    for toboggan in toboggans.iter() {
+        let num_collisions = count_tree_strikes(&map, &toboggan);
+        strange_collision_product = match strange_collision_product {
+            0 => num_collisions,
+            _ => strange_collision_product * num_collisions,
+        };
+    }
+
+    println!("Weird answer?: {}", strange_collision_product);
+}
+
+fn count_tree_strikes(map: &TobogganMap, toboggan: &Toboggan) -> usize {
+    let mut num_collisions = 0;
+
+    for location in toboggan.slide() {
+        // Check if we have reached the bottom of the slope
         if location.y as usize >= map.height() {
             break;
         }
+
         match map.get(location) {
             Some(Landmark::Tree) => num_collisions += 1,
             Some(Landmark::FreshPow) => (),
@@ -39,7 +63,7 @@ fn main() {
         }
     }
 
-    println!("You hit {} trees", num_collisions);
+    return num_collisions;
 }
 
 /// A location within a [TobogganMap].
