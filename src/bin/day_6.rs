@@ -20,7 +20,7 @@ fn main() {
             current_group = GroupAnswers::new();
             continue;
         }
-        let mut passenger_answers = BTreeSet::<char>::new();
+        let mut passenger_answers = Answers::new();
         for c in line.chars() {
             passenger_answers.insert(c);
         }
@@ -42,10 +42,7 @@ fn tally_group(g: &GroupAnswers) -> u64 {
     let mut answers = g.answers.iter();
     let initial: Answers = answers.next().unwrap().clone();
     let common_answers = answers.fold(initial, |accum, member_answers| {
-        accum
-            .intersection(member_answers)
-            .cloned()
-            .collect()
+        accum.intersection(member_answers).cloned().collect()
     });
 
     return common_answers.len() as u64;
