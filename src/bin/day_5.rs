@@ -1,19 +1,21 @@
 extern crate my;
 
 use my::input::InputReader;
-use std::char::ParseCharError;
 use std::cmp;
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::ops;
-use std::ops::{Bound, RangeBounds};
+use std::ops::Bound::{Excluded, Unbounded};
+use std::ops::RangeBounds;
 use std::str::FromStr;
 
 const PLANE_ROWS: u16 = 128;
 const PLANE_COLS: u16 = 8;
 
 type PlaneIndex = u16;
+type SeatId = u64;
+type Set = BTreeSet<SeatIdRange>;
 type Range = ops::Range<PlaneIndex>;
-
-type BoardingPass = String;
 
 #[derive(Debug)]
 struct Seat {
@@ -25,15 +27,36 @@ struct Seat {
 fn main() {
     let reader = InputReader::new(5);
 
-    let mut max_seat_id: u64 = 0;
+    // Build contiguous seat ranges
+    let mut seat_id_ranges = Set::new();
     for (i, line) in reader.lines().enumerate() {
         if let Ok(seat) = line.parse::<Seat>() {
-            max_seat_id = cmp::max(max_seat_id, seat.get_id());
+            let seat_id = seat.get_id();
+            range_insert(&mut seat_id_ranges, seat_id);
         } else {
             panic!("Error on line {}: {}", i + 1, line);
         }
     }
-    println!("Highest seat id: {}", max_seat_id);
+
+    // Find the seat with occupied adjacent seats, this is the found by two ranges whose distance
+    // is exactly 1
+    let mut last_range = None;
+    for range in seat_id_ranges.iter() {
+        if let Some(last_range) = last_range {
+            let distance = range_distance(last_range, range);
+            if distance == 1 {
+                println!(
+                    "My seat is {}, between {:?} and {:?}",
+                    cmp::min(last_range.end, range.end),
+                    last_range,
+                    range
+                );
+                break;
+            }
+        }
+
+        last_range = Some(range);
+    }
 }
 
 impl Seat {
@@ -45,8 +68,8 @@ impl Seat {
         }
     }
 
-    fn get_id(&self) -> u64 {
-        ((self.row * 8) + self.column) as u64
+    fn get_id(&self) -> SeatId {
+        ((self.row * 8) + self.column) as SeatId
     }
 }
 
@@ -76,9 +99,9 @@ impl Seat {
 }
 
 fn unwrap_range(range: Range) -> my::Result<PlaneIndex> {
-    if range.start_bound() == Bound::Unbounded {
+    if range.start_bound() == Unbounded {
         return Err(my::Error::new());
-    } else if range.end_bound() == Bound::Unbounded {
+    } else if range.end_bound() == Unbounded {
         return Err(my::Error::new());
     }
 
@@ -115,6 +138,112 @@ fn decide(specifier: char, range: &Range, lower_specifier: char, upper_specifier
     }
 }
 
+fn range_insert(s: &mut Set, id: SeatId) {
+    let id_as_range = SeatIdRange::from(id);
+
+    // Some(SeatIdRange) if we should grow this range tail
+    let before_range = match s.range((Unbounded, Excluded(&id_as_range))).next_back() {
+        Some(&range) => {
+            if range.end == id {
+                Some(range)
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
+    // Some(SeatIdRange) if we should grow this range head
+    let after_range = match s.range((Excluded(&id_as_range), Unbounded)).next() {
+        Some(&range) => {
+            if range.start == id + 1 {
+                Some(range)
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
+    // Build the new range to insert, remove mergeable ranges as needed
+    let mut range_accum = id_as_range;
+
+    if let Some(before_range) = before_range {
+        if range_can_merge(&id_as_range, &before_range) {
+            range_accum = range_merge(&range_accum, &before_range);
+            s.remove(&before_range);
+        }
+    }
+
+    if let Some(after_range) = after_range {
+        if range_can_merge(&id_as_range, &after_range) {
+            range_accum = range_merge(&range_accum, &after_range);
+            s.remove(&after_range);
+        }
+    }
+
+    s.insert(range_accum);
+}
+
+fn range_can_merge(l: &SeatIdRange, r: &SeatIdRange) -> bool {
+    (l.start <= r.start && l.end >= r.start) || (l.start <= r.end && l.end >= r.end)
+}
+
+fn range_merge(l: &SeatIdRange, r: &SeatIdRange) -> SeatIdRange {
+    SeatIdRange::new(cmp::min(l.start, r.start), cmp::max(l.end, r.end))
+}
+
+fn range_distance(l: &SeatIdRange, r: &SeatIdRange) -> usize {
+    if range_can_merge(l, r) {
+        0
+    } else if l < r {
+        (r.start - l.end) as usize
+    } else if r < l {
+        (l.start - r.end) as usize
+    } else {
+        panic!("equal ranges not covered by merge");
+    }
+}
+
+/// Range variant that provides a total ordering on range starts.
+///
+/// SeatIdRange is always [start, end)
+#[derive(Copy, Clone, Eq, Debug)]
+struct SeatIdRange {
+    start: SeatId,
+    end: SeatId,
+}
+
+impl SeatIdRange {
+    fn new(start: SeatId, end: SeatId) -> Self {
+        Self { start, end }
+    }
+}
+
+impl From<SeatId> for SeatIdRange {
+    fn from(id: SeatId) -> Self {
+        Self::new(id, id + 1)
+    }
+}
+
+impl Ord for SeatIdRange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start.cmp(&other.start)
+    }
+}
+
+impl PartialOrd for SeatIdRange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for SeatIdRange {
+    fn eq(&self, other: &Self) -> bool {
+        self.start == other.start
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,5 +265,101 @@ mod tests {
 
     fn make_seat(s: &'static str) -> Seat {
         s.parse::<Seat>().expect("failed to parse")
+    }
+
+    mod seat_id_range {
+        use super::*;
+
+        #[test]
+        fn test_empty_insert() {
+            let mut s = Set::new();
+            let id = 10;
+            range_insert(&mut s, id);
+
+            let id_range = SeatIdRange::from(id);
+            assert_eq!(s.get(&id_range), Some(&id_range));
+        }
+
+        #[test]
+        fn test_disjoint_insert() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 15;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::from(id)));
+            assert_eq!(contents.next(), Some(&SeatIdRange::from(other_id)));
+            assert_eq!(contents.next(), None);
+        }
+
+        #[test]
+        fn test_merging_lower_bound() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 9;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::new(9, 11)));
+            assert_eq!(contents.next(), None);
+        }
+
+        #[test]
+        fn test_merging_upper_bound() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 11;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::new(10, 12)));
+            assert_eq!(contents.next(), None);
+        }
+
+        #[test]
+        fn test_merging_upper_and_lower_bound() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 12;
+            let joining_id = 11;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+            range_insert(&mut s, joining_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::new(10, 13)));
+            assert_eq!(contents.next(), None);
+        }
+
+        #[test]
+        fn test_merging_equal_ranges() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 10;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::new(10, 11)));
+            assert_eq!(contents.next(), None);
+        }
+
+        #[test]
+        fn test_merge_boundaries() {
+            let mut s = Set::new();
+            let id = 10;
+            let other_id = 12;
+            range_insert(&mut s, id);
+            range_insert(&mut s, other_id);
+
+            let mut contents = s.iter();
+            assert_eq!(contents.next(), Some(&SeatIdRange::from(id)));
+            assert_eq!(contents.next(), Some(&SeatIdRange::from(other_id)));
+            assert_eq!(contents.next(), None);
+        }
     }
 }
