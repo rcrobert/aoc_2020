@@ -40,12 +40,15 @@ fn main() {
 
     // In the end, there are just two contiguous ranges because this is a fully booked plane, your
     // seat is between them.
-    // 
+    //
     // Assert there are exactly two and their distance is 1
     {
         assert!(seat_id_ranges.len() == 2);
         let mut ranges = seat_id_ranges.iter();
-        assert_eq!(range_distance(ranges.next().unwrap(), ranges.next().unwrap()), 1);
+        assert_eq!(
+            range_distance(ranges.next().unwrap(), ranges.next().unwrap()),
+            1
+        );
     }
 
     let your_seat_id = seat_id_ranges.iter().next().unwrap().end;
