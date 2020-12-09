@@ -41,7 +41,7 @@ fn do_magic(values: &Vec<InputType>) {
     for i in 0..values.len() {
         for j in i + 1..values.len() {
             for k in j + 1..values.len() {
-                let candidate: Vec<InputType> = vec!(values[i], values[j], values[k]);
+                let candidate: Vec<InputType> = vec![values[i], values[j], values[k]];
                 let sum = candidate.iter().sum::<InputType>();
                 if sum == SHITHOLE_YEAR {
                     // Found it

@@ -1,22 +1,19 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+extern crate my;
+
+use my::input::InputReader;
 
 fn main() {
-    let file = File::open("inputs/day_2").expect("could not open input file");
-    let reader = BufReader::new(file);
+    let reader = InputReader::new(2);
 
     let mut valid_password_count: u32 = 0;
     for line in reader.lines() {
-        if let Ok(line) = line {
-            let mut parts = line.split(": ");
-            let rule_string = parts.next().expect("invalid line");
-            let password = parts.next().expect("invalid line");
+        let mut parts = line.split(": ");
+        let rule_string = parts.next().expect("invalid line");
+        let password = parts.next().expect("invalid line");
 
-            let rule = Rule::from(rule_string);
-            if rule.test(password) {
-                valid_password_count += 1;
-            }
+        let rule = Rule::from(rule_string);
+        if rule.test(password) {
+            valid_password_count += 1;
         }
     }
 
@@ -58,7 +55,9 @@ impl From<&str> for Rule {
         let character = character.chars().nth(0).expect("invalid rule");
 
         let positions = positions_string.split('-');
-        let positions = positions.map(|v| v.parse().expect("invalid rule")).collect::<Vec<usize>>();
+        let positions = positions
+            .map(|v| v.parse().expect("invalid rule"))
+            .collect::<Vec<usize>>();
 
         return Rule {
             character,

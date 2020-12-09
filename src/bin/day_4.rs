@@ -1,44 +1,39 @@
+extern crate my;
+
+use my::input::InputReader;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io;
-use std::io::prelude::*;
-use std::io::BufReader;
 use std::ops::Range;
 
 fn main() {
-    let file = File::open("inputs/day_4").expect("could not open input file");
-    let reader = BufReader::new(file);
+    let reader = InputReader::new(4);
 
     let mut line_no = 1;
     let mut num_valid_passports = 0;
     let mut builder = PassportBuilder::new();
     for line in reader.lines() {
-        if let Ok(line) = line {
-            // Blank line, end of passport
-            if line.len() == 0 {
-                let passport = builder.bind();
-                if PassportValidator::new(&passport).check() {
-                    num_valid_passports += 1;
-                }
-
-                builder = PassportBuilder::new();
+        // Blank line, end of passport
+        if line.len() == 0 {
+            let passport = builder.bind();
+            if PassportValidator::new(&passport).check() {
+                num_valid_passports += 1;
             }
-            // Consume all the passport fields on this line
-            else {
-                assert!(line.is_ascii());
 
-                for kv_pair in line.split_whitespace() {
-                    let mut kv_pair = kv_pair.split(':').map(String::from);
-                    let key = kv_pair.next().expect("missing key");
-                    let value = kv_pair.next().expect("missing value");
-                    match builder.add_field(key, value) {
-                        Ok(_) => (),
-                        Err(e) => panic!("Error on line {}: {}", line_no, e),
-                    }
+            builder = PassportBuilder::new();
+        }
+        // Consume all the passport fields on this line
+        else {
+            assert!(line.is_ascii());
+
+            for kv_pair in line.split_whitespace() {
+                let mut kv_pair = kv_pair.split(':').map(String::from);
+                let key = kv_pair.next().expect("missing key");
+                let value = kv_pair.next().expect("missing value");
+                match builder.add_field(key, value) {
+                    Ok(_) => (),
+                    Err(e) => panic!("Error on line {}: {}", line_no, e),
                 }
             }
-        } else {
-            panic!("failed to read line");
         }
 
         line_no += 1;

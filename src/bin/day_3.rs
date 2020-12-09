@@ -1,36 +1,31 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+extern crate my;
+
+use my::input::InputReader;
 
 fn main() {
-    let file = File::open("inputs/day_3").expect("could not open input file");
-    let reader = BufReader::new(file);
+    let reader = InputReader::new(3);
 
     // Build the map
     let mut map_details: Vec<Vec<Landmark>> = Vec::new();
     for line in reader.lines() {
-        if let Ok(line) = line {
-            let mut map_row: Vec<Landmark> = Vec::new();
-            for character in line.chars() {
-                match character {
-                    '.' => map_row.push(Landmark::FreshPow),
-                    '#' => map_row.push(Landmark::Tree),
-                    _ => panic!("invalid input file"),
-                }
+        let mut map_row: Vec<Landmark> = Vec::new();
+        for character in line.chars() {
+            match character {
+                '.' => map_row.push(Landmark::FreshPow),
+                '#' => map_row.push(Landmark::Tree),
+                _ => panic!("invalid input file"),
             }
-            map_details.push(map_row);
-        } else {
-            panic!("could not read file");
         }
+        map_details.push(map_row);
     }
 
-    let toboggans = vec!(
+    let toboggans = vec![
         Toboggan::new(1, 1),
         Toboggan::new(1, 3),
         Toboggan::new(1, 5),
         Toboggan::new(1, 7),
         Toboggan::new(2, 1),
-    );
+    ];
 
     // Follow the route
 
@@ -93,10 +88,7 @@ struct TobogganMap {
 impl TobogganMap {
     fn new(details: Vec<Vec<Landmark>>) -> Self {
         let height = details.len();
-        Self {
-            details,
-            height,
-        }
+        Self { details, height }
     }
 
     /// Returns a reference to the [Landmark] from a map location or None if the location is out of
@@ -104,7 +96,11 @@ impl TobogganMap {
     fn get(&self, coordinate: Coordinate) -> Option<&Landmark> {
         if let Some(slope_row) = self.details.get(coordinate.y as usize) {
             let width = slope_row.len();
-            return Some(slope_row.get(coordinate.x as usize % width).expect("invalid map construction"));
+            return Some(
+                slope_row
+                    .get(coordinate.x as usize % width)
+                    .expect("invalid map construction"),
+            );
         } else {
             None
         }
@@ -136,10 +132,7 @@ impl Toboggan {
     fn slide<'a>(&'a self) -> TobogganPath<'a> {
         TobogganPath {
             parent: &self,
-            next_pos: Coordinate {
-                x: 0,
-                y: 0,
-            },
+            next_pos: Coordinate { x: 0, y: 0 },
         }
     }
 }
