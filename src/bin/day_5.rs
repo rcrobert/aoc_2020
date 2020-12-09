@@ -38,25 +38,18 @@ fn main() {
         }
     }
 
-    // Find the seat with occupied adjacent seats, this is the found by two ranges whose distance
-    // is exactly 1
-    let mut last_range = None;
-    for range in seat_id_ranges.iter() {
-        if let Some(last_range) = last_range {
-            let distance = range_distance(last_range, range);
-            if distance == 1 {
-                println!(
-                    "My seat is {}, between {:?} and {:?}",
-                    cmp::min(last_range.end, range.end),
-                    last_range,
-                    range
-                );
-                break;
-            }
-        }
-
-        last_range = Some(range);
+    // In the end, there are just two contiguous ranges because this is a fully booked plane, your
+    // seat is between them.
+    // 
+    // Assert there are exactly two and their distance is 1
+    {
+        assert!(seat_id_ranges.len() == 2);
+        let mut ranges = seat_id_ranges.iter();
+        assert_eq!(range_distance(ranges.next().unwrap(), ranges.next().unwrap()), 1);
     }
+
+    let your_seat_id = seat_id_ranges.iter().next().unwrap().end;
+    println!("My seat is {}", your_seat_id);
 }
 
 impl Seat {
